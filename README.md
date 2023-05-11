@@ -8,7 +8,7 @@ Open and View your Notability note file (*.note) on Windows
 ## Usage
 ### Download the pre-built version
 
-- [Version 0.1.0](https://github.com/GZhonghui/NotabilityViewer)
+- [Version 0.1.0](https://github.com/GZhonghui/NotabilityViewer/releases/tag/v0.1.0)
 
 ### Run from source code
 ```
