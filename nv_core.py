@@ -30,7 +30,7 @@ def draw(curvesnumpoints, curveswidth, curvescolors, curvespoints):
     etree.SubElement(svg, "defs")
 
     etree.SubElement(svg, "rect", x="0", y="0",
-                     width="100%", height="100%", fill="rgb(255,255,255)")
+                     width=str(gWidth), height=str(gHeight), fill="rgb(255,255,255)")
 
     # Curves drawn so far
     curve_index = 0
@@ -103,7 +103,7 @@ def calcMaxSize(curvesnumpoints, curveswidth, curvescolors, curvespoints):
     gHeight += 32
 
 def log(message : str):
-    if True:
+    if False:
         print(message)
 
 def convertXMLToSVG(xmlText : str):
@@ -113,7 +113,17 @@ def convertXMLToSVG(xmlText : str):
 def convertPlistToSVG(plist):
     log('start convert Plist to SVG')
 
-    dict_with_data = plist['$objects'][11]
+    for i in range(len(plist['$objects'])):
+        array_item = plist['$objects'][i]
+        if type(array_item) is dict and 'curvespoints' in array_item.keys():
+            dict_with_data = array_item
+            break
+
+    if not dict_with_data:
+        log('cant find in curvespoints in plist')
+        return
+
+    # dict_with_data = plist['$objects'][11]
 
     curvespoints_packed = dict_with_data['curvespoints']
     curvespoints = unpack_struct(curvespoints_packed, "f")
@@ -154,4 +164,4 @@ def convertPlistToSVG(plist):
     # svg content
     # etree.tostring(svg, xml_declaration=True, encoding="utf-8").decode()
 
-    return svg
+    return svg,gWidth,gHeight

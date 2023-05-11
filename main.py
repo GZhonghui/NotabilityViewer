@@ -1,10 +1,10 @@
-from PyQt6.QtWidgets import QApplication,QMainWindow,QDialog,QFileDialog,QLabel,QVBoxLayout
-from PyQt6.QtGui import QAction
+from PyQt6.QtWidgets import QApplication,QMainWindow,QDialog,QFileDialog,QLabel,QVBoxLayout,QScrollArea
+from PyQt6.QtGui import QAction,QPalette
 from PyQt6.QtSvgWidgets import QSvgWidget
 from zipfile import ZipFile, BadZipFile
 from lxml import etree
 import plistlib
-import sys
+import sys,math
 
 import nv_core
 from nv_core import log
@@ -21,6 +21,9 @@ Github: github.com/GZhonghui
 gCurrentFileName = None
 gCurrentSVG = None
 gSVGWidget = None
+gOriginalWidth = 256
+gOriginalHeight = 256
+gZoom = 1.0
 
 class XmlWriterWithUID(plistlib._PlistWriter):
     def write_value(self, value):
@@ -71,11 +74,16 @@ def openFile(filePath : str):
 
     xmlText = convertPlistToXml(sessionList)
 
+    # output XML
+    if False:
+        with open(f"{noteFolderName}.xml", "wt") as out_file:
+            out_file.write(xmlText)
+
     # XML
     # svg = nv_core.convertXMLToSVG(xmlText)
 
     # Plist
-    svg = nv_core.convertPlistToSVG(plistlib.loads(sessionList))
+    svg,width,height = nv_core.convertPlistToSVG(plistlib.loads(sessionList))
 
     # output svg
     if False:
@@ -91,16 +99,23 @@ def openFile(filePath : str):
     global gCurrentFileName
     gCurrentFileName = filePath
 
-    onFileOpened()
+    onFileOpened(width,height)
 
     noteZipFile.close()
 
-def onFileOpened():
+def onFileOpened(width : float, height : float):
     # update svg renderer
     log('note file opened: ' + gCurrentFileName)
     gSVGWidget.load(etree.tostring(gCurrentSVG, xml_declaration=True, encoding="utf-8"))
-    gSVGWidget.resize(gSVGWidget.sizeHint())
+    gSVGWidget.resize(int(width),int(height))
 
+    # reset size
+    global gOriginalWidth,gOriginalHeight,gZoom
+    gOriginalWidth = width
+    gOriginalHeight = height
+    gZoom = 1.0
+
+# TODO
 def onWindowResize():
     pass
 
@@ -112,12 +127,29 @@ def onClickOpen():
     if fileName and fileName != '':
         openFile(fileName)
 
+def UpdateZoom():
+    gSVGWidget.resize(int(gOriginalWidth*gZoom),int(gOriginalHeight*gZoom))
+
+def onClickZoomIn():
+    if gCurrentSVG is None: return
+
+    global gZoom
+    gZoom = min(5,gZoom*1.2)
+    UpdateZoom()
+
+def onClickZoomOut():
+    if gCurrentSVG is None: return
+
+    global gZoom
+    gZoom = max(0.2,gZoom/1.2)
+    UpdateZoom()
+
 def onClickAbout():
     # show a modal dialog
     dialog = QDialog()
     dialog.setWindowTitle('About')
     dialog.setModal(True)
-    dialog.setFixedSize(320, 200)
+    dialog.setFixedSize(360, 200)
 
     # add a label to dialog
     label = QLabel(aboutText)
@@ -148,19 +180,30 @@ def main():
     openAtcion = QAction('Open')
     openAtcion.triggered.connect(onClickOpen)
 
+    zoomInAction = QAction('Zoom In')
+    zoomInAction.triggered.connect(onClickZoomIn)
+
+    zoomOutAction = QAction('Zoom Out')
+    zoomOutAction.triggered.connect(onClickZoomOut)
+
     aboutAction = QAction('About')
     aboutAction.triggered.connect(onClickAbout)
 
     # add actions to toolbar
     toolbar.addAction(openAtcion)
-    toolbar.addAction('Zoom In')
-    toolbar.addAction('Zoom Out')
+    toolbar.addAction(zoomInAction)
+    toolbar.addAction(zoomOutAction)
     toolbar.addAction(aboutAction)
 
     # add a label to main window
     global gSVGWidget
     gSVGWidget = QSvgWidget()
-    mainWindow.setCentralWidget(gSVGWidget)
+
+    scrollArea = QScrollArea()
+    scrollArea.setBackgroundRole(QPalette.ColorRole.Dark)
+    scrollArea.setWidget(gSVGWidget)
+
+    mainWindow.setCentralWidget(scrollArea)
 
     sys.exit(app.exec())
 
